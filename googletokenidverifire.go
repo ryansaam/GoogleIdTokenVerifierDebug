@@ -140,7 +140,7 @@ func choiceKeyByKeyID(keyArray []keys, tokenKid string) (keys, error) {
 			return keyArray[1], nil
 		}
 	}
-  errorMessage := fmt.Sprintf("Token is not valid, token kid: %s from token does not match certificate kid[0]: %s or kid[1]:", tokenKid, keyArray[0].Kid, keyArray[1].Kid)
+  errorMessage := fmt.Sprintf("Token is not valid, token kid: %s from token does not match certificate kid[0]: %s or kid[1]: %s", tokenKid, keyArray[0].Kid, keyArray[1].Kid)
 	err := errors.New(errorMessage)
 	var nilKeys keys
 	return nilKeys, err
