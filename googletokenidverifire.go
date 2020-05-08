@@ -62,47 +62,47 @@ func Verify(authToken string, aud string) *TokenInfo {
 func VerifyGoogleIDToken(authToken string, certs *Certs, aud string) *TokenInfo {
 	header, payload, signature, messageToSign := divideAuthToken(authToken)
 
-	tokeninfo := getTokenInfo(payload)
-	var niltokeninfo *TokenInfo
-	//fmt.Println(tokeninfo)
-	if aud != tokeninfo.Aud {
+	tokenInfo := getTokenInfo(payload)
+	var nilTokenInfo *TokenInfo
+	//fmt.Println(tokenInfo)
+	if aud != tokenInfo.Aud {
 		err := errors.New("Token is not valid, Audience from token and certificate don't match")
 		fmt.Printf("Error verifying key %s\n", err.Error())
-		return niltokeninfo
+		return nilTokenInfo
 	}
-	if (tokeninfo.Iss != "accounts.google.com") && (tokeninfo.Iss != "https://accounts.google.com") {
+	if (tokenInfo.Iss != "accounts.google.com") && (tokenInfo.Iss != "https://accounts.google.com") {
 		err := errors.New("Token is not valid, ISS from token and certificate don't match")
 		fmt.Printf("Error verifying key %s\n", err.Error())
-		return niltokeninfo
+		return nilTokenInfo
 	}
-	if !checkTime(tokeninfo) {
+	if !checkTime(tokenInfo) {
 		err := errors.New("Token is not valid, Token is expired.")
 		fmt.Printf("Error verifying key %s\n", err.Error())
-		return niltokeninfo
+		return nilTokenInfo
 	}
 
 	key, err := choiceKeyByKeyID(certs.Keys, getAuthTokenKeyID(header))
 	if err != nil {
 		fmt.Printf("Error verifying key %s\n", err.Error())
-		return niltokeninfo
+		return nilTokenInfo
 	}
 	pKey := rsa.PublicKey{N: byteToInt(urlsafeB64decode(key.N)), E: btrToInt(byteToBtr(urlsafeB64decode(key.E)))}
 	err = rsa.VerifyPKCS1v15(&pKey, crypto.SHA256, messageToSign, signature)
 	if err != nil {
 		fmt.Printf("Error verifying key %s\n", err.Error())
-		return niltokeninfo
+		return nilTokenInfo
 	}
-	return tokeninfo
+	return tokenInfo
 }
 
-func getTokenInfo(bt []byte) *TokenInfo {
-	var a *TokenInfo
-	json.Unmarshal(bt, &a)
-	return a
+func getTokenInfo(payloadByte []byte) *TokenInfo {
+	var tokenInfo *TokenInfo
+	json.Unmarshal(payloadByte, &tokenInfo)
+	return tokenInfo
 }
 
-func checkTime(tokeninfo *TokenInfo) bool {
-	if (time.Now().Unix() < tokeninfo.Iat) || (time.Now().Unix() > tokeninfo.Exp) {
+func checkTime(tokenInfo *TokenInfo) bool {
+	if (time.Now().Unix() < tokenInfo.Iat) || (time.Now().Unix() > tokenInfo.Exp) {
 		return false
 	}
 	return true
@@ -110,16 +110,16 @@ func checkTime(tokeninfo *TokenInfo) bool {
 
 //GetCertsFromURL is
 func GetCertsFromURL() []byte {
-	res, _ := http.Get("https://www.googleapis.com/oauth2/v3/certs")
-	certs, _ := ioutil.ReadAll(res.Body)
-	res.Body.Close()
+	response, _ := http.Get("https://www.googleapis.com/oauth2/v3/certs")
+	certs, _ := ioutil.ReadAll(response.Body)
+	response.Body.Close()
 	return certs
 }
 
 //GetCerts is
-func GetCerts(bt []byte) *Certs {
+func GetCerts(certsByte []byte) *Certs {
 	var certs *Certs
-	json.Unmarshal(bt, &certs)
+	json.Unmarshal(certsByte, &certs)
 	return certs
 }
 
@@ -131,24 +131,24 @@ func urlsafeB64decode(str string) []byte {
 	return bt
 }
 
-func choiceKeyByKeyID(a []keys, tknkid string) (keys, error) {
-	if len(a) == 2 {
-		if a[0].Kid == tknkid {
-			return a[0], nil
+func choiceKeyByKeyID(keyArray []keys, tokenKid string) (keys, error) {
+	if len(keyArray) == 2 {
+		if keyArray[0].Kid == tokenKid {
+			return keyArray[0], nil
 		}
-		if a[1].Kid == tknkid {
-			return a[1], nil
+		if keyArray[1].Kid == tokenKid {
+			return keyArray[1], nil
 		}
 	}
-	err := errors.New("Token is not valid, kid from token and certificate don't match")
-	var b keys
-	return b, err
+	err := errors.New("Token is not valid, kid from token and certificate does not match")
+	var nilKeys keys
+	return nilKeys, err
 }
 
-func getAuthTokenKeyID(bt []byte) string {
-	var a keys
-	json.Unmarshal(bt, &a)
-	return a.Kid
+func getAuthTokenKeyID(jwtHeaderByte []byte) string {
+	var tokenKeys keys
+	json.Unmarshal(jwtHeaderByte, &tokenKeys)
+	return tokenKeys.Kid
 }
 
 func divideAuthToken(str string) ([]byte, []byte, []byte, []byte) {
